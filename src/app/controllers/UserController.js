@@ -6,14 +6,9 @@ class UserController {
     const schema = Yup.object().shape({
       name: Yup.string().required(),
       email: Yup.string().required(),
-      oldPassword: Yup.string()
-        .required()
-        .min(6),
       password: Yup.string()
         .min(6)
-        .when("oldPassword", (oldPassword, field) =>
-          oldPassword ? field.required : field
-        ),
+        .required(),
     });
 
     if (!(await schema.isValid(req.body))) {
@@ -37,6 +32,24 @@ class UserController {
   }
 
   async update(req, res) {
+    const schema = Yup.object().shape({
+      name: Yup.string(),
+      email: Yup.string(),
+      oldPassword: Yup.string().min(5),
+      password: Yup.string()
+        .min(6)
+        .when("oldPassword", (oldPassword, field) =>
+          oldPassword ? field.required() : field
+        ),
+      confirmPassword: Yup.string().when("password", (password, field) =>
+        password ? field.required().oneOf([Yup.ref("password")]) : field
+      ),
+    });
+
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ error: "Validation fails" });
+    }
+
     const { email, oldPassword } = req.body;
 
     const user = await User.findByPk(req.userID);
@@ -63,8 +76,6 @@ class UserController {
       email,
       provider,
     });
-
-    return res.json({ message: true });
   }
 }
 
